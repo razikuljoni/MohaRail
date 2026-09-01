@@ -26,6 +26,7 @@ import com.example.data.local.entity.SearchHistoryEntity
 import com.example.data.model.SeatClass
 import com.example.data.model.Station
 import com.example.data.model.Train
+import com.example.data.model.TrainType
 import com.example.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,13 +43,38 @@ fun SchedulesScreen(
     onSwapStations: () -> Unit,
     onTrackTrain: (String) -> Unit,
     onViewTrainDetail: (Train) -> Unit,
-    onBookTicket: (Train, SeatClass) -> Unit
+    onBookTicket: (Train, SeatClass) -> Unit,
+    onGlobalSearch: ((String) -> Unit)? = null
 ) {
     var showOriginMenu by remember { mutableStateOf(false) }
     var showDestMenu by remember { mutableStateOf(false) }
     var selectedDate by remember { mutableStateOf("01 Sep 2026") }
+    var searchModeTab by remember { mutableStateOf(0) } // 0: Route Search, 1: Quick Train Search
+    var quickQuery by remember { mutableStateOf("") }
+    var selectedTrainTypeFilter by remember { mutableStateOf<TrainType?>(null) }
 
     val dateOptions = listOf("Today, 01 Sep", "Tomorrow, 02 Sep", "03 Sep", "04 Sep", "05 Sep")
+
+    val displayedTrains = remember(searchResults, quickQuery, selectedTrainTypeFilter, searchModeTab) {
+        if (searchModeTab == 1 && quickQuery.isNotBlank()) {
+            searchResults.filter { tr ->
+                val q = quickQuery.trim().lowercase()
+                (tr.trainNo.lowercase().contains(q) ||
+                 tr.nameEn.lowercase().contains(q) ||
+                 tr.nameBn.contains(q) ||
+                 tr.originStationNameEn.lowercase().contains(q) ||
+                 tr.originStationNameBn.contains(q) ||
+                 tr.destStationNameEn.lowercase().contains(q) ||
+                 tr.destStationNameBn.contains(q) ||
+                 tr.routeStops.any { it.stationNameEn.lowercase().contains(q) || it.stationNameBn.contains(q) }) &&
+                (selectedTrainTypeFilter == null || tr.type == selectedTrainTypeFilter)
+            }
+        } else if (selectedTrainTypeFilter != null) {
+            searchResults.filter { it.type == selectedTrainTypeFilter }
+        } else {
+            searchResults
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -57,163 +83,246 @@ fun SchedulesScreen(
             .testTag("screen_schedules"),
         contentPadding = PaddingValues(bottom = 90.dp)
     ) {
-        // Station Search Card
+        // Mode Switcher Card
         item {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = if (isBengali) "ট্রেন খুঁজুন ও সময়সূচী" else "Find Trains & Schedule",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BdRailGreenDark
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Origin & Destination Box with Swap Button
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            // Origin Station Selector
-                            ExposedDropdownMenuBox(
-                                expanded = showOriginMenu,
-                                onExpandedChange = { showOriginMenu = it }
-                            ) {
-                                OutlinedTextField(
-                                    value = originStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Dhaka",
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text(if (isBengali) "হতে (Origin)" else "From (Origin)", fontSize = 11.sp) },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.TripOrigin, contentDescription = null, tint = BdRailGreenPrimary, modifier = Modifier.size(18.dp))
-                                    },
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showOriginMenu) },
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier
-                                        .menuAnchor()
-                                        .fillMaxWidth()
-                                        .testTag("dropdown_origin_station")
-                                )
-                                ExposedDropdownMenu(
-                                    expanded = showOriginMenu,
-                                    onDismissRequest = { showOriginMenu = false }
-                                ) {
-                                    allStations.forEach { station ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    text = "${if (isBengali) station.nameBn else station.nameEn} (${station.code})",
-                                                    fontSize = 13.sp
-                                                )
-                                            },
-                                            onClick = {
-                                                onSetOrigin(station)
-                                                showOriginMenu = false
-                                            }
-                                        )
-                                    }
+                Column(modifier = Modifier.padding(14.dp)) {
+                    // Tab switcher
+                    TabRow(
+                        selectedTabIndex = searchModeTab,
+                        containerColor = Color(0xFFF1F8E9),
+                        contentColor = BdRailGreenDark,
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp))
+                    ) {
+                        Tab(
+                            selected = searchModeTab == 0,
+                            onClick = { searchModeTab = 0 },
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(Icons.Default.AltRoute, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Text(if (isBengali) "রুট ও সময়সূচী" else "Route Search", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
-
-                            // Destination Station Selector
-                            ExposedDropdownMenuBox(
-                                expanded = showDestMenu,
-                                onExpandedChange = { showDestMenu = it }
-                            ) {
-                                OutlinedTextField(
-                                    value = destStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Chattogram",
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text(if (isBengali) "গন্তব্য (Destination)" else "To (Destination)", fontSize = 11.sp) },
-                                    leadingIcon = {
-                                        Icon(Icons.Default.Place, contentDescription = null, tint = BdRailOrangeAccent, modifier = Modifier.size(18.dp))
-                                    },
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDestMenu) },
-                                    shape = RoundedCornerShape(10.dp),
-                                    modifier = Modifier
-                                        .menuAnchor()
-                                        .fillMaxWidth()
-                                        .testTag("dropdown_dest_station")
-                                )
-                                ExposedDropdownMenu(
-                                    expanded = showDestMenu,
-                                    onDismissRequest = { showDestMenu = false }
-                                ) {
-                                    allStations.forEach { station ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    text = "${if (isBengali) station.nameBn else station.nameEn} (${station.code})",
-                                                    fontSize = 13.sp
-                                                )
-                                            },
-                                            onClick = {
-                                                onSetDest(station)
-                                                showDestMenu = false
-                                            }
-                                        )
-                                    }
+                        )
+                        Tab(
+                            selected = searchModeTab == 1,
+                            onClick = { searchModeTab = 1 },
+                            text = {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Text(if (isBengali) "ট্রেন বা স্টেশন খুঁজুন" else "Find Train/Station", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
-                        }
-
-                        // Floating Swap Button
-                        IconButton(
-                            onClick = onSwapStations,
-                            modifier = Modifier
-                                .align(Alignment.CenterEnd)
-                                .padding(end = 40.dp)
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(BdRailGreenDark)
-                                .testTag("btn_swap_stations")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.SwapVert,
-                                contentDescription = "Swap",
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Date Selection Chips
-                    Text(
-                        text = if (isBengali) "যাত্রার তারিখ:" else "Journey Date:",
-                        fontSize = 11.sp,
-                        color = TextSecondaryLight,
-                        fontWeight = FontWeight.Medium
-                    )
+                    if (searchModeTab == 0) {
+                        // Origin & Destination Box with Swap Button
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            Column(
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                // Origin Station Selector
+                                ExposedDropdownMenuBox(
+                                    expanded = showOriginMenu,
+                                    onExpandedChange = { showOriginMenu = it }
+                                ) {
+                                    OutlinedTextField(
+                                        value = originStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Dhaka",
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text(if (isBengali) "হতে (Origin Station)" else "From (Origin Station)", fontSize = 11.sp) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.TripOrigin, contentDescription = null, tint = BdRailGreenPrimary, modifier = Modifier.size(18.dp))
+                                        },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showOriginMenu) },
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier
+                                            .menuAnchor()
+                                            .fillMaxWidth()
+                                            .testTag("dropdown_origin_station")
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = showOriginMenu,
+                                        onDismissRequest = { showOriginMenu = false }
+                                    ) {
+                                        allStations.forEach { station ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = "${if (isBengali) station.nameBn else station.nameEn} (${station.code})",
+                                                        fontSize = 13.sp
+                                                    )
+                                                },
+                                                onClick = {
+                                                    onSetOrigin(station)
+                                                    showOriginMenu = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
 
-                    Spacer(modifier = Modifier.height(6.dp))
+                                // Destination Station Selector
+                                ExposedDropdownMenuBox(
+                                    expanded = showDestMenu,
+                                    onExpandedChange = { showDestMenu = it }
+                                ) {
+                                    OutlinedTextField(
+                                        value = destStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Chattogram",
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text(if (isBengali) "গন্তব্য (Destination Station)" else "To (Destination Station)", fontSize = 11.sp) },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Place, contentDescription = null, tint = BdRailOrangeAccent, modifier = Modifier.size(18.dp))
+                                        },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDestMenu) },
+                                        shape = RoundedCornerShape(10.dp),
+                                        modifier = Modifier
+                                            .menuAnchor()
+                                            .fillMaxWidth()
+                                            .testTag("dropdown_dest_station")
+                                    )
+                                    ExposedDropdownMenu(
+                                        expanded = showDestMenu,
+                                        onDismissRequest = { showDestMenu = false }
+                                    ) {
+                                        allStations.forEach { station ->
+                                            DropdownMenuItem(
+                                                text = {
+                                                    Text(
+                                                        text = "${if (isBengali) station.nameBn else station.nameEn} (${station.code})",
+                                                        fontSize = 13.sp
+                                                    )
+                                                },
+                                                onClick = {
+                                                    onSetDest(station)
+                                                    showDestMenu = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
 
+                            // Floating Swap Button
+                            IconButton(
+                                onClick = onSwapStations,
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .padding(end = 40.dp)
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(BdRailGreenDark)
+                                    .testTag("btn_swap_stations")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.SwapVert,
+                                    contentDescription = "Swap",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Date Selection Chips
+                        Text(
+                            text = if (isBengali) "যাত্রার তারিখ:" else "Journey Date:",
+                            fontSize = 11.sp,
+                            color = TextSecondaryLight,
+                            fontWeight = FontWeight.Medium
+                        )
+
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            dateOptions.forEach { dt ->
+                                val isSelected = selectedDate == dt
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { selectedDate = dt },
+                                    label = { Text(dt, fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = BdRailGreenPrimary,
+                                        selectedLabelColor = Color.White,
+                                        containerColor = Color(0xFFF0F4F4),
+                                        labelColor = TextPrimaryLight
+                                    )
+                                )
+                            }
+                        }
+                    } else {
+                        // Quick Train / Station Universal Search
+                        OutlinedTextField(
+                            value = quickQuery,
+                            onValueChange = {
+                                quickQuery = it
+                                onGlobalSearch?.invoke(it)
+                            },
+                            label = { Text(if (isBengali) "ট্রেনের নাম, নম্বর বা স্টেশন লিখুন" else "Search Train Name, No (701, 813) or Station", fontSize = 11.sp) },
+                            placeholder = { Text("e.g. 701, Suborno, কক্সবাজার, Sylhet", fontSize = 12.sp) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Search, contentDescription = null, tint = BdRailGreenPrimary)
+                            },
+                            trailingIcon = {
+                                if (quickQuery.isNotEmpty()) {
+                                    IconButton(onClick = {
+                                        quickQuery = ""
+                                        onGlobalSearch?.invoke("")
+                                    }) {
+                                        Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth().testTag("input_quick_global_search")
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Train Type Filters
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        dateOptions.forEach { dt ->
-                            val isSelected = selectedDate == dt
+                        FilterChip(
+                            selected = selectedTrainTypeFilter == null,
+                            onClick = { selectedTrainTypeFilter = null },
+                            label = { Text(if (isBengali) "সকল ট্রেন" else "All Trains", fontSize = 11.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = BdRailOrangeAccent,
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                        TrainType.values().forEach { tType ->
+                            val isSel = selectedTrainTypeFilter == tType
                             FilterChip(
-                                selected = isSelected,
-                                onClick = { selectedDate = dt },
-                                label = { Text(dt, fontSize = 11.sp) },
+                                selected = isSel,
+                                onClick = { selectedTrainTypeFilter = if (isSel) null else tType },
+                                label = { Text(if (isBengali) tType.labelBn else tType.labelEn, fontSize = 11.sp) },
                                 colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = BdRailGreenPrimary,
-                                    selectedLabelColor = Color.White,
-                                    containerColor = Color(0xFFF0F4F4),
-                                    labelColor = TextPrimaryLight
+                                    selectedContainerColor = BdRailGreenDark,
+                                    selectedLabelColor = Color.White
                                 )
                             )
                         }
@@ -222,17 +331,17 @@ fun SchedulesScreen(
             }
         }
 
-        // Recent Search History
-        if (searchHistory.isNotEmpty()) {
+        // Recent Search History (Only on Route Search Mode)
+        if (searchModeTab == 0 && searchHistory.isNotEmpty()) {
             item {
-                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) {
                     Text(
                         text = if (isBengali) "সাম্প্রতিক অনুসন্ধান" else "Recent Searches",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextSecondaryLight
                     )
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -274,7 +383,7 @@ fun SchedulesScreen(
 
         // Search Results Header
         item {
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -283,14 +392,14 @@ fun SchedulesScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = if (isBengali) "উপলব্ধ ট্রেনসমূহ (${searchResults.size})" else "Available Trains (${searchResults.size})",
+                    text = if (isBengali) "উপলব্ধ ট্রেনসমূহ (${displayedTrains.size})" else "Available Trains (${displayedTrains.size})",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = BdRailGreenDark
                 )
 
                 Text(
-                    text = if (isBengali) "সব আন্তঃনগর" else "All Intercity",
+                    text = if (isBengali) "মহারেল স্মার্ট সময়সূচী" else "MohaRail Timetable",
                     fontSize = 11.sp,
                     color = TextSecondaryLight
                 )
@@ -298,7 +407,7 @@ fun SchedulesScreen(
         }
 
         // Train Result Cards
-        items(searchResults) { train ->
+        items(displayedTrains) { train ->
             TrainScheduleCard(
                 train = train,
                 isBengali = isBengali,
@@ -350,12 +459,27 @@ fun TrainScheduleCard(
                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                         )
                     }
-                    Text(
-                        text = if (isBengali) train.nameBn else train.nameEn,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = BdRailGreenDark
-                    )
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = if (isBengali) train.nameBn else train.nameEn,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = BdRailGreenDark
+                            )
+                            Text(
+                                text = "(${if (isBengali) train.nameEn else train.nameBn})",
+                                fontSize = 11.sp,
+                                color = TextSecondaryLight
+                            )
+                        }
+                        Text(
+                            text = if (isBengali) train.type.labelBn else train.type.labelEn,
+                            fontSize = 10.sp,
+                            color = BdRailOrangeAccent,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 // Off-day indicator
@@ -435,7 +559,7 @@ fun TrainScheduleCard(
                         )
                     }
                     Text(
-                        text = if (isBengali) "${train.routeStops.size}টি বিরতি" else "${train.routeStops.size} Stoppages",
+                        text = if (isBengali) "${train.routeStops.size}টি বিরতি • ${train.totalCoaches} বগি" else "${train.routeStops.size} Stops • ${train.totalCoaches} Coaches",
                         fontSize = 9.sp,
                         color = BdRailGreenDark
                     )
@@ -494,7 +618,7 @@ fun TrainScheduleCard(
                     onClick = onTrackTrain,
                     colors = ButtonDefaults.buttonColors(containerColor = BdRailGreenDark),
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).testTag("btn_track_${train.trainNo}")
                 ) {
                     Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
@@ -505,17 +629,17 @@ fun TrainScheduleCard(
                     )
                 }
 
-                // Stoppage Timetable Button
+                // Stoppage & Bogie Timetable Button
                 OutlinedButton(
                     onClick = onViewDetail,
                     shape = RoundedCornerShape(8.dp),
                     border = BorderStroke(1.dp, BdRailGreenDark),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).testTag("btn_detail_${train.trainNo}")
                 ) {
                     Icon(Icons.Default.FormatListBulleted, contentDescription = null, tint = BdRailGreenDark, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = if (isBengali) "স্টপেজ রুট" else "Stoppages",
+                        text = if (isBengali) "স্টপেজ ও বগি" else "Stops & Bogies",
                         fontSize = 11.sp,
                         color = BdRailGreenDark,
                         fontWeight = FontWeight.Bold

@@ -1,6 +1,8 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.data.local.entity.TrainAlarmEntity
+import com.example.data.model.CoachInfo
 import com.example.data.model.SeatClass
 import com.example.data.model.Train
 import com.example.ui.theme.*
@@ -103,7 +106,7 @@ fun CrowdReportDialog(
                         FilterChip(
                             selected = isSelected,
                             onClick = { selectedCoach = coach },
-                            label = { Text(coach, fontSize = 10.sp) },
+                            label = { Text(coach, fontSize = 11.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = BdRailGreenDark,
                                 selectedLabelColor = Color.White
@@ -114,26 +117,20 @@ fun CrowdReportDialog(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = speedText,
-                        onValueChange = { speedText = it },
-                        label = { Text(if (isBengali) "গতি (km/h)" else "Speed (km/h)", fontSize = 11.sp) },
-                        singleLine = true,
-                        shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1f).testTag("input_crowd_speed")
-                    )
-
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = passedStation,
                         onValueChange = { passedStation = it },
-                        label = { Text(if (isBengali) "নিকটবর্তী স্টেশন" else "Passing Station", fontSize = 11.sp) },
-                        singleLine = true,
+                        label = { Text(if (isBengali) "নিকটবর্তী স্টেশন" else "Near Station", fontSize = 11.sp) },
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.weight(1.5f).testTag("input_crowd_station")
+                        modifier = Modifier.weight(1f).testTag("input_crowd_station")
+                    )
+                    OutlinedTextField(
+                        value = speedText,
+                        onValueChange = { speedText = it.filter { ch -> ch.isDigit() } },
+                        label = { Text(if (isBengali) "গতি (km/h)" else "Speed km/h", fontSize = 11.sp) },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.width(100.dp).testTag("input_crowd_speed")
                     )
                 }
 
@@ -142,28 +139,24 @@ fun CrowdReportDialog(
                 OutlinedTextField(
                     value = conditionNote,
                     onValueChange = { conditionNote = it },
-                    label = { Text(if (isBengali) "ট্রেনের অবস্থা বা মন্তব্য" else "Track Condition / Note", fontSize = 11.sp) },
-                    singleLine = false,
-                    maxLines = 2,
+                    label = { Text(if (isBengali) "মন্তব্য / ট্রেনের অবস্থা" else "Status Note", fontSize = 11.sp) },
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth().testTag("input_crowd_note")
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Button(
                     onClick = {
-                        val speed = speedText.toIntOrNull() ?: 65
-                        onSubmit(reporterName, selectedCoach, conditionNote, speed, passedStation)
+                        val spd = speedText.toIntOrNull() ?: 60
+                        onSubmit(reporterName, selectedCoach, conditionNote, spd, passedStation)
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = BdRailOrangeAccent),
+                    colors = ButtonDefaults.buttonColors(containerColor = BdRailGreenDark),
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth().testTag("btn_submit_crowd_report")
                 ) {
-                    Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isBengali) "লাইভ আপডেট পোস্ট করুন" else "Publish Live Update",
+                        text = if (isBengali) "রিপোর্ট জমা দিন" else "Broadcast Live Radar",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -181,11 +174,11 @@ fun BookTicketDialog(
     onDismiss: () -> Unit,
     onConfirm: (name: String, coach: String, seat: String) -> Unit
 ) {
-    var passengerName by remember { mutableStateOf("Md. Tanvir") }
-    var selectedCoach by remember { mutableStateOf("Coach Cha (চ)") }
-    var seatNumber by remember { mutableStateOf("Cha-34, Cha-35") }
+    var passengerName by remember { mutableStateOf("") }
+    var selectedCoach by remember { mutableStateOf("Cha (চ)") }
+    var seatNumber by remember { mutableStateOf("45") }
 
-    val baseFare = when (seatClass) {
+    val fare = when (seatClass) {
         SeatClass.SHOVON -> train.baseFareShovon
         SeatClass.S_CHAIR -> train.baseFareSChair
         SeatClass.SNIGDHA -> train.baseFareSnigdha
@@ -193,8 +186,8 @@ fun BookTicketDialog(
         SeatClass.AC_B -> train.baseFareAcBerth
         SeatClass.F_BERTH -> train.baseFareAcBerth + 200
     }
-    val vat = (baseFare * 0.15).toInt()
-    val total = baseFare + vat + 20
+    val vat = (fare * 0.15).toInt()
+    val total = fare + vat + 20
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -209,12 +202,18 @@ fun BookTicketDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = if (isBengali) "অনলাইন ই-টিকিট কনফার্মেশন" else "E-Ticket Booking Confirmation",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = BdRailGreenDark
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.ConfirmationNumber, contentDescription = null, tint = BdRailGreenPrimary)
+                        Text(
+                            text = if (isBengali) "ই-টিকিট বুকিং নিশ্চিতকরণ" else "Confirm E-Ticket",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            color = BdRailGreenDark
+                        )
+                    }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }
@@ -224,10 +223,10 @@ fun BookTicketDialog(
 
                 Surface(
                     color = Color(0xFFF1F8E9),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
+                    Column(modifier = Modifier.padding(12.dp)) {
                         Text(
                             text = "${train.trainNo} - ${if (isBengali) train.nameBn else train.nameEn}",
                             fontWeight = FontWeight.Bold,
@@ -240,7 +239,7 @@ fun BookTicketDialog(
                             color = TextSecondaryLight
                         )
                         Text(
-                            text = "${if (isBengali) seatClass.nameBn else seatClass.nameEn} • ${train.departureTime}",
+                            text = "${if (isBengali) "শ্রেণি:" else "Class:"} ${if (isBengali) seatClass.nameBn else seatClass.nameEn}",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = BdRailOrangeAccent
@@ -253,43 +252,44 @@ fun BookTicketDialog(
                 OutlinedTextField(
                     value = passengerName,
                     onValueChange = { passengerName = it },
-                    label = { Text(if (isBengali) "যাত্রীর নাম (NID অনুযায়ী)" else "Passenger Name (As per NID)", fontSize = 11.sp) },
+                    label = { Text(if (isBengali) "যাত্রীর নাম" else "Passenger Name", fontSize = 11.sp) },
+                    placeholder = { Text("As per NID / Passport", fontSize = 12.sp) },
                     singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth().testTag("input_booking_passenger_name")
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier.fillMaxWidth().testTag("input_ticket_passenger")
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                OutlinedTextField(
-                    value = selectedCoach,
-                    onValueChange = { selectedCoach = it },
-                    label = { Text(if (isBengali) "বগি (Coach)" else "Coach", fontSize = 11.sp) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = seatNumber,
-                    onValueChange = { seatNumber = it },
-                    label = { Text(if (isBengali) "আসন নম্বর (Seat No)" else "Seat Number", fontSize = 11.sp) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = selectedCoach,
+                        onValueChange = { selectedCoach = it },
+                        label = { Text(if (isBengali) "বগি" else "Coach", fontSize = 11.sp) },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).testTag("input_ticket_coach")
+                    )
+                    OutlinedTextField(
+                        value = seatNumber,
+                        onValueChange = { seatNumber = it },
+                        label = { Text(if (isBengali) "আসন নং" else "Seat No", fontSize = 11.sp) },
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.weight(1f).testTag("input_ticket_seat")
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFFFF3E0), RoundedCornerShape(8.dp))
+                        .padding(10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = if (isBengali) "মোট প্রদেয় টাকা:" else "Total Payable:", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                    Text(text = "৳$total", fontSize = 18.sp, fontWeight = FontWeight.Black, color = BdRailOrangeAccent)
+                    Text(text = if (isBengali) "মোট ভাড়া (ভ্যাট ও ফি সহ):" else "Total Fare (Incl. VAT):", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text(text = "৳ $total", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = BdRailGreenDark)
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
@@ -298,12 +298,10 @@ fun BookTicketDialog(
                     onClick = { onConfirm(passengerName, selectedCoach, seatNumber) },
                     colors = ButtonDefaults.buttonColors(containerColor = BdRailGreenDark),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = Modifier.fillMaxWidth().testTag("btn_confirm_ticket_booking")
+                    modifier = Modifier.fillMaxWidth().testTag("btn_confirm_ticket_purchase")
                 ) {
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (isBengali) "টিকিট কনফার্ম ও ওয়ালেটে সংরক্ষণ" else "Confirm & Save to Wallet",
+                        text = if (isBengali) "টিকিট সংরক্ষণ ও ডাউনলোড করুন" else "Save Ticket to Wallet",
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp
                     )
@@ -321,10 +319,10 @@ fun AlarmDialog(
     isBengali: Boolean,
     onDismiss: () -> Unit,
     onCreateAlarm: (trainNo: String, trainName: String, station: String, minutes: Int) -> Unit,
-    onToggleAlarm: (Long, Boolean) -> Unit,
-    onDeleteAlarm: (Long) -> Unit
+    onToggleAlarm: (id: Long, enabled: Boolean) -> Unit,
+    onDeleteAlarm: (id: Long) -> Unit
 ) {
-    var stationName by remember { mutableStateOf("Dhaka (Kamalapur)") }
+    var stationName by remember { mutableStateOf("Dhaka Airport") }
     var minutesBefore by remember { mutableStateOf(15) }
 
     Dialog(onDismissRequest = onDismiss) {
@@ -344,9 +342,9 @@ fun AlarmDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(Icons.Default.Alarm, contentDescription = null, tint = BdRailGreenDark)
+                        Icon(Icons.Default.Alarm, contentDescription = null, tint = BdRailOrangeAccent)
                         Text(
-                            text = if (isBengali) "স্টেশন আগমন অ্যালার্ম" else "Station Arrival Wake-up Alarm",
+                            text = if (isBengali) "গন্তব্য অ্যালার্ম ম্যানেজার" else "Destination Alarm Radar",
                             fontWeight = FontWeight.Bold,
                             fontSize = 14.sp,
                             color = BdRailGreenDark
@@ -445,6 +443,8 @@ fun TrainDetailModal(
     onDismiss: () -> Unit,
     onTrack: () -> Unit
 ) {
+    var selectedModalTab by remember { mutableStateOf(0) } // 0: Stops & Schedule, 1: Bogie & Coaches, 2: Fares
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             shape = RoundedCornerShape(18.dp),
@@ -452,9 +452,10 @@ fun TrainDetailModal(
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)
+                .fillMaxHeight(0.88f)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                // Header Bar
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -466,87 +467,288 @@ fun TrainDetailModal(
                     ) {
                         Surface(
                             color = BdRailGreenLight,
-                            shape = RoundedCornerShape(4.dp)
+                            shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
                                 text = train.trainNo,
                                 color = BdRailGreenDark,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             )
                         }
-                        Text(
-                            text = if (isBengali) train.nameBn else train.nameEn,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp,
-                            color = BdRailGreenDark
-                        )
+                        Column {
+                            Text(
+                                text = if (isBengali) train.nameBn else train.nameEn,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = BdRailGreenDark
+                            )
+                            Text(
+                                text = if (isBengali) train.type.labelBn else train.type.labelEn,
+                                fontSize = 10.sp,
+                                color = BdRailOrangeAccent,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                     IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
                         Icon(Icons.Default.Close, contentDescription = "Close")
                     }
                 }
 
+                Spacer(modifier = Modifier.height(6.dp))
+
                 Text(
-                    text = "${if (isBengali) train.originStationNameBn else train.originStationNameEn} ➔ ${if (isBengali) train.destStationNameBn else train.destStationNameEn} • ${train.totalDistanceKm} km",
+                    text = "${if (isBengali) train.originStationNameBn else train.originStationNameEn} ➔ ${if (isBengali) train.destStationNameBn else train.destStationNameEn} • ${train.totalDistanceKm} km • ${if (isBengali) "ছুটির দিন: " + train.offDayBn else "Off: " + train.offDayEn}",
                     fontSize = 11.sp,
                     color = TextSecondaryLight
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
-                HorizontalDivider(color = Color(0xFFECEFF1))
+
+                // Tab Switcher for Modal
+                TabRow(
+                    selectedTabIndex = selectedModalTab,
+                    containerColor = Color(0xFFF1F8E9),
+                    contentColor = BdRailGreenDark,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp))
+                ) {
+                    Tab(
+                        selected = selectedModalTab == 0,
+                        onClick = { selectedModalTab = 0 },
+                        text = { Text(if (isBengali) "স্টপেজ ও সময়" else "Stops", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                    )
+                    Tab(
+                        selected = selectedModalTab == 1,
+                        onClick = { selectedModalTab = 1 },
+                        text = { Text(if (isBengali) "বগি ও কোচ বিন্যাস" else "Bogies & Coaches", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                    )
+                    Tab(
+                        selected = selectedModalTab == 2,
+                        onClick = { selectedModalTab = 2 },
+                        text = { Text(if (isBengali) "ভাড়া তালিকা" else "Fare Matrix", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text(
-                    text = if (isBengali) "সকল স্টপেজ ও সময়সূচী" else "All Stoppages & Timetable",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = TextPrimaryLight
-                )
+                Box(modifier = Modifier.weight(1f)) {
+                    when (selectedModalTab) {
+                        0 -> {
+                            // Stops list
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(train.routeStops) { stop ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 6.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(
+                                                text = if (isBengali) stop.stationNameBn else stop.stationNameEn,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 12.sp,
+                                                color = TextPrimaryLight
+                                            )
+                                            Text(
+                                                text = "${stop.distanceFromOriginKm} km • Platform ${stop.platform}",
+                                                fontSize = 10.sp,
+                                                color = TextSecondaryLight
+                                            )
+                                        }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LazyColumn(modifier = Modifier.weight(1f)) {
-                    items(train.routeStops) { stop ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = if (isBengali) stop.stationNameBn else stop.stationNameEn,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp,
-                                    color = TextPrimaryLight
-                                )
-                                Text(
-                                    text = "${stop.distanceFromOriginKm} km • Platform ${stop.platform}",
-                                    fontSize = 10.sp,
-                                    color = TextSecondaryLight
-                                )
-                            }
-
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text(
-                                    text = "Arr: ${stop.scheduledArrival} | Dep: ${stop.scheduledDeparture}",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = BdRailGreenDark
-                                )
-                                if (stop.haltMinutes > 0) {
-                                    Text(
-                                        text = "${stop.haltMinutes}m halt",
-                                        fontSize = 9.sp,
-                                        color = BdRailOrangeAccent
-                                    )
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = "Arr: ${stop.scheduledArrival} | Dep: ${stop.scheduledDeparture}",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = BdRailGreenDark
+                                            )
+                                            if (stop.haltMinutes > 0) {
+                                                Text(
+                                                    text = "${stop.haltMinutes}m halt",
+                                                    fontSize = 9.sp,
+                                                    color = BdRailOrangeAccent
+                                                )
+                                            }
+                                        }
+                                    }
+                                    HorizontalDivider(color = Color(0xFFF5F5F5))
                                 }
                             }
                         }
-                        HorizontalDivider(color = Color(0xFFF5F5F5))
+
+                        1 -> {
+                            // Bogie / Coach Layout
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                item {
+                                    Surface(
+                                        color = Color(0xFFFFF8E1),
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(Icons.Default.Train, contentDescription = null, tint = Color(0xFFF57F17), modifier = Modifier.size(16.dp))
+                                            Text(
+                                                text = "${train.rakeType} (${train.totalCoaches} ${if (isBengali) "টি বগি" else "Coaches"})",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color(0xFFE65100)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                items(train.coaches) { coach ->
+                                    Card(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (coach.isAc) Color(0xFFE0F2F1) else Color(0xFFFAFAFA)
+                                        ),
+                                        border = BorderStroke(1.dp, if (coach.isAc) BdRailGreenPrimary else Color(0xFFE0E0E0))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .clip(CircleShape)
+                                                        .background(if (coach.isAc) BdRailGreenPrimary else BdRailGreenDark),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = if (isBengali) coach.coachLetterBn else coach.coachLetterEn,
+                                                        color = Color.White,
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp
+                                                    )
+                                                }
+                                                Column {
+                                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                        Text(
+                                                            text = if (isBengali) coach.coachClass.nameBn else coach.coachClass.nameEn,
+                                                            fontWeight = FontWeight.Bold,
+                                                            fontSize = 12.sp,
+                                                            color = TextPrimaryLight
+                                                        )
+                                                        if (coach.isPantry) {
+                                                            Surface(
+                                                                color = BdRailOrangeLight,
+                                                                shape = RoundedCornerShape(4.dp)
+                                                            ) {
+                                                                Text(
+                                                                    text = if (isBengali) "খাবার বগি" else "Dining/Pantry",
+                                                                    fontSize = 9.sp,
+                                                                    color = Color(0xFFE65100),
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    Text(
+                                                        text = "${if (isBengali) "মোট আসন: " else "Seats: "}${coach.totalSeats} • ${if (coach.isAc) "Air Conditioned" else "Non-AC Fan"}",
+                                                        fontSize = 10.sp,
+                                                        color = TextSecondaryLight
+                                                    )
+                                                }
+                                            }
+
+                                            Icon(
+                                                imageVector = if (coach.isAc) Icons.Default.AcUnit else Icons.Default.AirlineSeatReclineNormal,
+                                                contentDescription = null,
+                                                tint = if (coach.isAc) BdRailGreenPrimary else TextSecondaryLight,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        2 -> {
+                            // Fares matrix
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(4.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                val fareList = listOf(
+                                    Triple(SeatClass.SHOVON, train.baseFareShovon, "Non-AC 2x3 Seating"),
+                                    Triple(SeatClass.S_CHAIR, train.baseFareSChair, "Comfortable Non-AC Chair 2x2"),
+                                    Triple(SeatClass.SNIGDHA, train.baseFareSnigdha, "Air-Conditioned Chair Coach"),
+                                    Triple(SeatClass.AC_S, train.baseFareAcSeat, "Deluxe AC Cabin Chair"),
+                                    Triple(SeatClass.AC_B, train.baseFareAcBerth, "AC Sleeping Sleeper Berth")
+                                )
+
+                                fareList.forEach { (sClass, baseFare, desc) ->
+                                    val vat = (baseFare * 0.15).toInt()
+                                    val total = baseFare + vat + 20
+                                    Surface(
+                                        color = Color(0xFFF9FBE7),
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(10.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = if (isBengali) sClass.nameBn else sClass.nameEn,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                    color = BdRailGreenDark
+                                                )
+                                                Text(
+                                                    text = desc,
+                                                    fontSize = 10.sp,
+                                                    color = TextSecondaryLight
+                                                )
+                                            }
+
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                Text(
+                                                    text = "৳ $total",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 14.sp,
+                                                    color = BdRailOrangeAccent
+                                                )
+                                                Text(
+                                                    text = "(Base: ৳$baseFare + VAT)",
+                                                    fontSize = 9.sp,
+                                                    color = TextSecondaryLight
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

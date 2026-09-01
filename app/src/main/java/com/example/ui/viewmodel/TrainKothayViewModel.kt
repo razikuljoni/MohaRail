@@ -28,7 +28,10 @@ data class UiState(
     val liveStatus: LiveTrainStatus? = null,
     val isTrackingModeGps: Boolean = true, // true = GPS, false = SMS 16318
     val searchTrainQuery: String = "",
-    // Schedules
+    // Schedules & Global Search
+    val globalSearchQuery: String = "",
+    val globalSearchResults: List<Train> = emptyList(),
+    val selectedTrainTypeFilter: TrainType? = null,
     val searchOriginStation: Station? = null,
     val searchDestStation: Station? = null,
     val journeyDate: String = "Today, 01 Sep",
@@ -71,7 +74,6 @@ class TrainKothayViewModel(private val repository: TrainRepository) : ViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     init {
-        // Initial setup with default stations & train
         val defaultOrigin = allStations.find { it.code == "DA" } ?: allStations[0]
         val defaultDest = allStations.find { it.code == "CTG" } ?: allStations[2]
 
@@ -83,6 +85,7 @@ class TrainKothayViewModel(private val repository: TrainRepository) : ViewModel(
                 fareDestStation = defaultDest,
                 selectedStationBoardStation = defaultOrigin,
                 searchResults = repository.searchTrains(defaultOrigin.code, defaultDest.code),
+                globalSearchResults = allTrains,
                 liveStatus = repository.getLiveStatusForTrain("701")
             )
         }
@@ -119,6 +122,33 @@ class TrainKothayViewModel(private val repository: TrainRepository) : ViewModel(
 
     fun setTrackingMode(isGps: Boolean) {
         _uiState.update { it.copy(isTrackingModeGps = isGps) }
+    }
+
+    fun onGlobalSearch(query: String) {
+        val results = repository.globalSearch(query)
+        val filtered = if (_uiState.value.selectedTrainTypeFilter != null) {
+            results.filter { it.type == _uiState.value.selectedTrainTypeFilter }
+        } else {
+            results
+        }
+        _uiState.update {
+            it.copy(
+                globalSearchQuery = query,
+                globalSearchResults = filtered
+            )
+        }
+    }
+
+    fun setTrainTypeFilter(type: TrainType?) {
+        _uiState.update {
+            val query = it.globalSearchQuery
+            val results = repository.globalSearch(query)
+            val filtered = if (type != null) results.filter { tr -> tr.type == type } else results
+            it.copy(
+                selectedTrainTypeFilter = type,
+                globalSearchResults = filtered
+            )
+        }
     }
 
     fun setSearchOrigin(station: Station) {
@@ -333,6 +363,9 @@ class TrainKothayViewModel(private val repository: TrainRepository) : ViewModel(
         _uiState.update { it.copy(notificationMessage = null) }
     }
 }
+
+typealias MohaRailViewModel = TrainKothayViewModel
+typealias MohaRailViewModelFactory = TrainKothayViewModelFactory
 
 class TrainKothayViewModelFactory(private val repository: TrainRepository) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")

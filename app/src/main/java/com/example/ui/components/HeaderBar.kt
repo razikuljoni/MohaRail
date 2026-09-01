@@ -63,21 +63,35 @@ fun AppHeader(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Train,
-                            contentDescription = "Train Kothay Logo",
+                            contentDescription = "MohaRail Logo",
                             tint = Color.White,
                             modifier = Modifier.size(24.dp)
                         )
                     }
 
                     Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = if (isBengali) "মহারেল" else "MohaRail",
+                                color = Color.White,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = Color(0x33FFFFFF)
+                            ) {
+                                Text(
+                                    text = if (isBengali) "MohaRail" else "মহারেল",
+                                    color = Color(0xFFE0F2F1),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
+                        }
                         Text(
-                            text = if (isBengali) "ট্রেন কোথায়" else "Train Kothay",
-                            color = Color.White,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = if (isBengali) "বাংলাদেশ রেলওয়ে লাইভ ট্র্যাকার" else "Bangladesh Railway Live Tracker",
+                            text = if (isBengali) "বাংলাদেশ রেলওয়ে ডিজিটাল সঙ্গী" else "Bangladesh Railway Digital Companion",
                             color = Color(0xFFB2DFDB),
                             fontSize = 11.sp
                         )

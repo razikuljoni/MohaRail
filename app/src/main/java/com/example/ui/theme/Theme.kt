@@ -48,7 +48,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun TrainKothayTheme(
+fun MohaRailTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
@@ -59,4 +59,12 @@ fun TrainKothayTheme(
         typography = Typography,
         content = content
     )
+}
+
+@Composable
+fun TrainKothayTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
+) {
+    MohaRailTheme(darkTheme = darkTheme, content = content)
 }

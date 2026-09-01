@@ -57,7 +57,7 @@ fun SystemDocsScreen(
                 ) {
                     Icon(Icons.Default.Architecture, contentDescription = null, tint = Color.White)
                     Text(
-                        text = if (isBengali) "ট্রেন কোথায়: কারিগরি পরিকল্পনা ও এপিআই" else "Train Kothay: System Specs & API Roadmap",
+                        text = if (isBengali) "মহারেল: কারিগরি পরিকল্পনা ও এপিআই" else "MohaRail: System Specs & API Roadmap",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp

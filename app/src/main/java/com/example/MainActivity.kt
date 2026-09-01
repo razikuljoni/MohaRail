@@ -17,7 +17,7 @@ import com.example.data.local.AppDatabase
 import com.example.data.repository.TrainRepository
 import com.example.ui.components.*
 import com.example.ui.screens.*
-import com.example.ui.theme.TrainKothayTheme
+import com.example.ui.theme.*
 import com.example.ui.viewmodel.AppTab
 import com.example.ui.viewmodel.TrainKothayViewModel
 import com.example.ui.viewmodel.TrainKothayViewModelFactory
@@ -34,7 +34,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            TrainKothayTheme {
+            MohaRailTheme {
                 TrainKothayApp(viewModel = viewModel)
             }
         }
@@ -94,7 +94,7 @@ fun TrainKothayApp(viewModel: TrainKothayViewModel) {
                     SchedulesScreen(
                         isBengali = uiState.isBengali,
                         allStations = viewModel.allStations,
-                        searchResults = uiState.searchResults,
+                        searchResults = if (uiState.globalSearchQuery.isNotEmpty() || uiState.selectedTrainTypeFilter != null) uiState.globalSearchResults else uiState.searchResults,
                         searchHistory = searchHistory,
                         originStation = uiState.searchOriginStation,
                         destStation = uiState.searchDestStation,
@@ -108,7 +108,8 @@ fun TrainKothayApp(viewModel: TrainKothayViewModel) {
                         onViewTrainDetail = { viewModel.viewTrainDetails(it) },
                         onBookTicket = { train, seatClass ->
                             viewModel.openBookTicketDialog(train, seatClass)
-                        }
+                        },
+                        onGlobalSearch = { viewModel.onGlobalSearch(it) }
                     )
                 }
 

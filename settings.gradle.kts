@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "Train Kothay"
+rootProject.name = "MohaRail"
 
 include(":app")

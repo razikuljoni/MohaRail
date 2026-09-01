@@ -37,6 +37,16 @@ enum class TrainType(val labelEn: String, val labelBn: String) {
     SPECIAL("Tourist / Special", "ট্যুরিস্ট / স্পেশাল")
 }
 
+data class CoachInfo(
+    val coachLetterEn: String,
+    val coachLetterBn: String,
+    val coachClass: SeatClass,
+    val totalSeats: Int,
+    val isAc: Boolean = false,
+    val hasToilet: Boolean = true,
+    val isPantry: Boolean = false
+)
+
 data class Train(
     val trainNo: String,
     val nameEn: String,
@@ -58,7 +68,11 @@ data class Train(
     val baseFareSnigdha: Int,
     val baseFareAcSeat: Int,
     val baseFareAcBerth: Int,
-    val baseFareShovon: Int
+    val baseFareShovon: Int,
+    val coaches: List<CoachInfo> = emptyList(),
+    val totalCoaches: Int = 14,
+    val hasDiningCar: Boolean = true,
+    val rakeType: String = "LHB / Indonesian / Chinese Coach"
 )
 
 data class LiveTrainStatus(
