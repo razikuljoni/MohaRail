@@ -1,0 +1,6 @@
+{
+  "name": "Train Kothay",
+  "description": "Bangladesh Railway live train tracking, schedules, seat & fare query, real-time crowdsourced delay status, station boards, and seamless e-ticketing companion.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
