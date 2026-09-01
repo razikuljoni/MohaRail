@@ -48,10 +48,50 @@ fun SchedulesScreen(
 ) {
     var showOriginMenu by remember { mutableStateOf(false) }
     var showDestMenu by remember { mutableStateOf(false) }
+    var originInputText by remember { mutableStateOf("") }
+    var destInputText by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf("01 Sep 2026") }
     var searchModeTab by remember { mutableStateOf(0) } // 0: Route Search, 1: Quick Train Search
     var quickQuery by remember { mutableStateOf("") }
     var selectedTrainTypeFilter by remember { mutableStateOf<TrainType?>(null) }
+
+    LaunchedEffect(originStation, isBengali) {
+        originInputText = originStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Dhaka"
+    }
+
+    LaunchedEffect(destStation, isBengali) {
+        destInputText = destStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Chattogram"
+    }
+
+    val filteredOriginStations = remember(originInputText, allStations) {
+        val q = originInputText.trim().lowercase()
+        if (q.isBlank()) {
+            allStations
+        } else {
+            allStations.filter { st ->
+                st.nameEn.lowercase().contains(q) ||
+                st.nameBn.contains(q) ||
+                st.code.lowercase().contains(q) ||
+                st.district.lowercase().contains(q) ||
+                st.division.lowercase().contains(q)
+            }
+        }
+    }
+
+    val filteredDestStations = remember(destInputText, allStations) {
+        val q = destInputText.trim().lowercase()
+        if (q.isBlank()) {
+            allStations
+        } else {
+            allStations.filter { st ->
+                st.nameEn.lowercase().contains(q) ||
+                st.nameBn.contains(q) ||
+                st.code.lowercase().contains(q) ||
+                st.district.lowercase().contains(q) ||
+                st.division.lowercase().contains(q)
+            }
+        }
+    }
 
     val dateOptions = listOf("Today, 01 Sep", "Tomorrow, 02 Sep", "03 Sep", "04 Sep", "05 Sep")
 
@@ -153,16 +193,35 @@ fun SchedulesScreen(
                                     onExpandedChange = { showOriginMenu = it }
                                 ) {
                                     OutlinedTextField(
-                                        value = originStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Dhaka",
-                                        onValueChange = {},
-                                        readOnly = true,
+                                        value = originInputText,
+                                        onValueChange = { query ->
+                                            originInputText = query
+                                            showOriginMenu = true
+                                        },
                                         label = { Text(if (isBengali) "হতে (Origin Station)" else "From (Origin Station)", fontSize = 11.sp) },
+                                        placeholder = { Text(if (isBengali) "স্টেশন নাম বা কোড দিয়ে খুঁজুন..." else "Type station name or code...", fontSize = 12.sp) },
                                         leadingIcon = {
                                             Icon(Icons.Default.TripOrigin, contentDescription = null, tint = BdRailGreenPrimary, modifier = Modifier.size(18.dp))
                                         },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showOriginMenu) },
+                                        trailingIcon = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (originInputText.isNotBlank()) {
+                                                    IconButton(
+                                                        onClick = {
+                                                            originInputText = ""
+                                                            showOriginMenu = true
+                                                        },
+                                                        modifier = Modifier.size(24.dp)
+                                                    ) {
+                                                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = TextSecondaryLight, modifier = Modifier.size(16.dp))
+                                                    }
+                                                }
+                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = showOriginMenu)
+                                            }
+                                        },
                                         shape = RoundedCornerShape(10.dp),
                                         colors = tfColors,
+                                        singleLine = true,
                                         modifier = Modifier
                                             .menuAnchor()
                                             .fillMaxWidth()
@@ -170,23 +229,69 @@ fun SchedulesScreen(
                                     )
                                     ExposedDropdownMenu(
                                         expanded = showOriginMenu,
-                                        onDismissRequest = { showOriginMenu = false },
-                                        modifier = Modifier.background(Color.White)
+                                        onDismissRequest = {
+                                            showOriginMenu = false
+                                            originInputText = originStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Dhaka"
+                                        },
+                                        modifier = Modifier
+                                            .background(Color.White)
+                                            .heightIn(max = 280.dp)
                                     ) {
-                                        allStations.forEach { station ->
+                                        if (filteredOriginStations.isEmpty()) {
                                             DropdownMenuItem(
                                                 text = {
                                                     Text(
-                                                        text = "${if (isBengali) station.nameBn else station.nameEn} (${station.code})",
-                                                        fontSize = 13.sp,
-                                                        color = TextPrimaryLight
+                                                        text = if (isBengali) "কোনো স্টেশন পাওয়া যায়নি" else "No matching stations found",
+                                                        fontSize = 12.sp,
+                                                        color = TextSecondaryLight
                                                     )
                                                 },
-                                                onClick = {
-                                                    onSetOrigin(station)
-                                                    showOriginMenu = false
-                                                }
+                                                onClick = {}
                                             )
+                                        } else {
+                                            filteredOriginStations.forEach { station ->
+                                                val isSelected = station.code == originStation?.code
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Column(modifier = Modifier.weight(1f, fill = false)) {
+                                                                Text(
+                                                                    text = if (isBengali) station.nameBn else station.nameEn,
+                                                                    fontSize = 13.sp,
+                                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                                    color = if (isSelected) BdRailGreenDark else TextPrimaryLight
+                                                                )
+                                                                Text(
+                                                                    text = if (isBengali) "${station.nameEn} • ${station.district}" else "${station.nameBn} • ${station.district}",
+                                                                    fontSize = 10.sp,
+                                                                    color = TextSecondaryLight
+                                                                )
+                                                            }
+                                                            Surface(
+                                                                shape = RoundedCornerShape(4.dp),
+                                                                color = if (isSelected) BdRailGreenPrimary.copy(alpha = 0.15f) else Color(0xFFECEFF1)
+                                                            ) {
+                                                                Text(
+                                                                    text = station.code,
+                                                                    fontSize = 10.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = if (isSelected) BdRailGreenDark else TextSecondaryLight,
+                                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    },
+                                                    onClick = {
+                                                        onSetOrigin(station)
+                                                        originInputText = if (isBengali) station.nameBn else station.nameEn
+                                                        showOriginMenu = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -197,16 +302,35 @@ fun SchedulesScreen(
                                     onExpandedChange = { showDestMenu = it }
                                 ) {
                                     OutlinedTextField(
-                                        value = destStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Chattogram",
-                                        onValueChange = {},
-                                        readOnly = true,
+                                        value = destInputText,
+                                        onValueChange = { query ->
+                                            destInputText = query
+                                            showDestMenu = true
+                                        },
                                         label = { Text(if (isBengali) "গন্তব্য (Destination Station)" else "To (Destination Station)", fontSize = 11.sp) },
+                                        placeholder = { Text(if (isBengali) "স্টেশন নাম বা কোড দিয়ে খুঁজুন..." else "Type station name or code...", fontSize = 12.sp) },
                                         leadingIcon = {
                                             Icon(Icons.Default.Place, contentDescription = null, tint = BdRailOrangeAccent, modifier = Modifier.size(18.dp))
                                         },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDestMenu) },
+                                        trailingIcon = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (destInputText.isNotBlank()) {
+                                                    IconButton(
+                                                        onClick = {
+                                                            destInputText = ""
+                                                            showDestMenu = true
+                                                        },
+                                                        modifier = Modifier.size(24.dp)
+                                                    ) {
+                                                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = TextSecondaryLight, modifier = Modifier.size(16.dp))
+                                                    }
+                                                }
+                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDestMenu)
+                                            }
+                                        },
                                         shape = RoundedCornerShape(10.dp),
                                         colors = tfColors,
+                                        singleLine = true,
                                         modifier = Modifier
                                             .menuAnchor()
                                             .fillMaxWidth()
@@ -214,23 +338,69 @@ fun SchedulesScreen(
                                     )
                                     ExposedDropdownMenu(
                                         expanded = showDestMenu,
-                                        onDismissRequest = { showDestMenu = false },
-                                        modifier = Modifier.background(Color.White)
+                                        onDismissRequest = {
+                                            showDestMenu = false
+                                            destInputText = destStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Chattogram"
+                                        },
+                                        modifier = Modifier
+                                            .background(Color.White)
+                                            .heightIn(max = 280.dp)
                                     ) {
-                                        allStations.forEach { station ->
+                                        if (filteredDestStations.isEmpty()) {
                                             DropdownMenuItem(
                                                 text = {
                                                     Text(
-                                                        text = "${if (isBengali) station.nameBn else station.nameEn} (${station.code})",
-                                                        fontSize = 13.sp,
-                                                        color = TextPrimaryLight
+                                                        text = if (isBengali) "কোনো স্টেশন পাওয়া যায়নি" else "No matching stations found",
+                                                        fontSize = 12.sp,
+                                                        color = TextSecondaryLight
                                                     )
                                                 },
-                                                onClick = {
-                                                    onSetDest(station)
-                                                    showDestMenu = false
-                                                }
+                                                onClick = {}
                                             )
+                                        } else {
+                                            filteredDestStations.forEach { station ->
+                                                val isSelected = station.code == destStation?.code
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Column(modifier = Modifier.weight(1f, fill = false)) {
+                                                                Text(
+                                                                    text = if (isBengali) station.nameBn else station.nameEn,
+                                                                    fontSize = 13.sp,
+                                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                                    color = if (isSelected) BdRailOrangeAccent else TextPrimaryLight
+                                                                )
+                                                                Text(
+                                                                    text = if (isBengali) "${station.nameEn} • ${station.district}" else "${station.nameBn} • ${station.district}",
+                                                                    fontSize = 10.sp,
+                                                                    color = TextSecondaryLight
+                                                                )
+                                                            }
+                                                            Surface(
+                                                                shape = RoundedCornerShape(4.dp),
+                                                                color = if (isSelected) BdRailOrangeAccent.copy(alpha = 0.15f) else Color(0xFFECEFF1)
+                                                            ) {
+                                                                Text(
+                                                                    text = station.code,
+                                                                    fontSize = 10.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = if (isSelected) BdRailOrangeAccent else TextSecondaryLight,
+                                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                    },
+                                                    onClick = {
+                                                        onSetDest(station)
+                                                        destInputText = if (isBengali) station.nameBn else station.nameEn
+                                                        showDestMenu = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }

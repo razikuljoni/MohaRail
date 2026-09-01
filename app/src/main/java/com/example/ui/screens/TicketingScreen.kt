@@ -60,6 +60,44 @@ fun TicketingScreen(
 
     var showOriginMenu by remember { mutableStateOf(false) }
     var showDestMenu by remember { mutableStateOf(false) }
+    var originInputText by remember { mutableStateOf("") }
+    var destInputText by remember { mutableStateOf("") }
+
+    LaunchedEffect(originStation, isBengali) {
+        originInputText = originStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Dhaka"
+    }
+
+    LaunchedEffect(destStation, isBengali) {
+        destInputText = destStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Chattogram"
+    }
+
+    val filteredOriginStations = remember(originInputText, allStations) {
+        val q = originInputText.trim().lowercase()
+        if (q.isBlank()) {
+            allStations
+        } else {
+            allStations.filter { st ->
+                st.nameEn.lowercase().contains(q) ||
+                st.nameBn.contains(q) ||
+                st.code.lowercase().contains(q) ||
+                st.district.lowercase().contains(q)
+            }
+        }
+    }
+
+    val filteredDestStations = remember(destInputText, allStations) {
+        val q = destInputText.trim().lowercase()
+        if (q.isBlank()) {
+            allStations
+        } else {
+            allStations.filter { st ->
+                st.nameEn.lowercase().contains(q) ||
+                st.nameBn.contains(q) ||
+                st.code.lowercase().contains(q) ||
+                st.district.lowercase().contains(q)
+            }
+        }
+    }
 
     val currentTrain = allTrains.firstOrNull() ?: allTrains[0]
 
@@ -167,28 +205,77 @@ fun TicketingScreen(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     OutlinedTextField(
-                                        value = originStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Dhaka",
-                                        onValueChange = {},
-                                        readOnly = true,
+                                        value = originInputText,
+                                        onValueChange = { query ->
+                                            originInputText = query
+                                            showOriginMenu = true
+                                        },
                                         label = { Text(if (isBengali) "হতে" else "From", fontSize = 10.sp) },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showOriginMenu) },
+                                        placeholder = { Text(if (isBengali) "স্টেশন..." else "Station...", fontSize = 11.sp) },
+                                        trailingIcon = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (originInputText.isNotBlank()) {
+                                                    IconButton(
+                                                        onClick = {
+                                                            originInputText = ""
+                                                            showOriginMenu = true
+                                                        },
+                                                        modifier = Modifier.size(20.dp)
+                                                    ) {
+                                                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = TextSecondaryLight, modifier = Modifier.size(14.dp))
+                                                    }
+                                                }
+                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = showOriginMenu)
+                                            }
+                                        },
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ticketingTfColors,
+                                        singleLine = true,
                                         modifier = Modifier.menuAnchor().fillMaxWidth()
                                     )
                                     ExposedDropdownMenu(
                                         expanded = showOriginMenu,
-                                        onDismissRequest = { showOriginMenu = false },
-                                        modifier = Modifier.background(Color.White)
+                                        onDismissRequest = {
+                                            showOriginMenu = false
+                                            originInputText = originStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Dhaka"
+                                        },
+                                        modifier = Modifier.background(Color.White).heightIn(max = 260.dp)
                                     ) {
-                                        allStations.forEach { st ->
+                                        if (filteredOriginStations.isEmpty()) {
                                             DropdownMenuItem(
-                                                text = { Text(if (isBengali) st.nameBn else st.nameEn, fontSize = 12.sp, color = TextPrimaryLight) },
-                                                onClick = {
-                                                    onSetOrigin(st)
-                                                    showOriginMenu = false
-                                                }
+                                                text = { Text(if (isBengali) "পাওয়া যায়নি" else "No match", fontSize = 11.sp, color = TextSecondaryLight) },
+                                                onClick = {}
                                             )
+                                        } else {
+                                            filteredOriginStations.forEach { st ->
+                                                val isSelected = st.code == originStation?.code
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Text(
+                                                                text = if (isBengali) st.nameBn else st.nameEn,
+                                                                fontSize = 12.sp,
+                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                                color = if (isSelected) BdRailGreenDark else TextPrimaryLight
+                                                            )
+                                                            Text(
+                                                                text = st.code,
+                                                                fontSize = 10.sp,
+                                                                color = TextSecondaryLight
+                                                            )
+                                                        }
+                                                    },
+                                                    onClick = {
+                                                        onSetOrigin(st)
+                                                        originInputText = if (isBengali) st.nameBn else st.nameEn
+                                                        showOriginMenu = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -200,28 +287,77 @@ fun TicketingScreen(
                                     modifier = Modifier.weight(1f)
                                 ) {
                                     OutlinedTextField(
-                                        value = destStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Chattogram",
-                                        onValueChange = {},
-                                        readOnly = true,
+                                        value = destInputText,
+                                        onValueChange = { query ->
+                                            destInputText = query
+                                            showDestMenu = true
+                                        },
                                         label = { Text(if (isBengali) "গন্তব্য" else "To", fontSize = 10.sp) },
-                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDestMenu) },
+                                        placeholder = { Text(if (isBengali) "স্টেশন..." else "Station...", fontSize = 11.sp) },
+                                        trailingIcon = {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                if (destInputText.isNotBlank()) {
+                                                    IconButton(
+                                                        onClick = {
+                                                            destInputText = ""
+                                                            showDestMenu = true
+                                                        },
+                                                        modifier = Modifier.size(20.dp)
+                                                    ) {
+                                                        Icon(Icons.Default.Clear, contentDescription = "Clear", tint = TextSecondaryLight, modifier = Modifier.size(14.dp))
+                                                    }
+                                                }
+                                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDestMenu)
+                                            }
+                                        },
                                         shape = RoundedCornerShape(8.dp),
                                         colors = ticketingTfColors,
+                                        singleLine = true,
                                         modifier = Modifier.menuAnchor().fillMaxWidth()
                                     )
                                     ExposedDropdownMenu(
                                         expanded = showDestMenu,
-                                        onDismissRequest = { showDestMenu = false },
-                                        modifier = Modifier.background(Color.White)
+                                        onDismissRequest = {
+                                            showDestMenu = false
+                                            destInputText = destStation?.let { if (isBengali) it.nameBn else it.nameEn } ?: "Chattogram"
+                                        },
+                                        modifier = Modifier.background(Color.White).heightIn(max = 260.dp)
                                     ) {
-                                        allStations.forEach { st ->
+                                        if (filteredDestStations.isEmpty()) {
                                             DropdownMenuItem(
-                                                text = { Text(if (isBengali) st.nameBn else st.nameEn, fontSize = 12.sp, color = TextPrimaryLight) },
-                                                onClick = {
-                                                    onSetDest(st)
-                                                    showDestMenu = false
-                                                }
+                                                text = { Text(if (isBengali) "পাওয়া যায়নি" else "No match", fontSize = 11.sp, color = TextSecondaryLight) },
+                                                onClick = {}
                                             )
+                                        } else {
+                                            filteredDestStations.forEach { st ->
+                                                val isSelected = st.code == destStation?.code
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Text(
+                                                                text = if (isBengali) st.nameBn else st.nameEn,
+                                                                fontSize = 12.sp,
+                                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                                color = if (isSelected) BdRailOrangeAccent else TextPrimaryLight
+                                                            )
+                                                            Text(
+                                                                text = st.code,
+                                                                fontSize = 10.sp,
+                                                                color = TextSecondaryLight
+                                                            )
+                                                        }
+                                                    },
+                                                    onClick = {
+                                                        onSetDest(st)
+                                                        destInputText = if (isBengali) st.nameBn else st.nameEn
+                                                        showDestMenu = false
+                                                    }
+                                                )
+                                            }
                                         }
                                     }
                                 }
