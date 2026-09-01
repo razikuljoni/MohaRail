@@ -148,9 +148,12 @@ fun TrainKothayApp(viewModel: TrainKothayViewModel) {
                     )
                 }
 
-                AppTab.SYSTEM_DOCS -> {
-                    SystemDocsScreen(
-                        isBengali = uiState.isBengali
+                AppTab.FEEDBACK -> {
+                    FeedbackScreen(
+                        isBengali = uiState.isBengali,
+                        onShowNotification = { msg ->
+                            // Show notification message
+                        }
                     )
                 }
             }

@@ -17,7 +17,7 @@ enum class AppTab(val titleEn: String, val titleBn: String) {
     SCHEDULES("Schedules", "সময়সূচী ও রুট"),
     TICKETING("E-Tickets & Fare", "ই-টিকিট ও ভাড়া"),
     STATION_BOARD("Station Board", "স্টেশন বোর্ড"),
-    SYSTEM_DOCS("System Spec & API", "সিস্টেম রোডম্যাপ")
+    FEEDBACK("Help & Feedback", "মতামত ও হেল্প")
 }
 
 data class UiState(

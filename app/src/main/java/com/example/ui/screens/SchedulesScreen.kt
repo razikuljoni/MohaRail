@@ -126,6 +126,22 @@ fun SchedulesScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (searchModeTab == 0) {
+                        val tfColors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = TextPrimaryLight,
+                            unfocusedTextColor = TextPrimaryLight,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            focusedBorderColor = BdRailGreenDark,
+                            unfocusedBorderColor = Color(0xFFB0BEC5),
+                            focusedLabelColor = BdRailGreenDark,
+                            unfocusedLabelColor = TextSecondaryLight,
+                            focusedPlaceholderColor = Color(0xFF78909C),
+                            unfocusedPlaceholderColor = Color(0xFF90A4AE),
+                            focusedLeadingIconColor = BdRailGreenPrimary,
+                            unfocusedLeadingIconColor = BdRailGreenPrimary,
+                            cursorColor = BdRailGreenDark
+                        )
+
                         // Origin & Destination Box with Swap Button
                         Box(modifier = Modifier.fillMaxWidth()) {
                             Column(
@@ -146,6 +162,7 @@ fun SchedulesScreen(
                                         },
                                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showOriginMenu) },
                                         shape = RoundedCornerShape(10.dp),
+                                        colors = tfColors,
                                         modifier = Modifier
                                             .menuAnchor()
                                             .fillMaxWidth()
@@ -153,14 +170,16 @@ fun SchedulesScreen(
                                     )
                                     ExposedDropdownMenu(
                                         expanded = showOriginMenu,
-                                        onDismissRequest = { showOriginMenu = false }
+                                        onDismissRequest = { showOriginMenu = false },
+                                        modifier = Modifier.background(Color.White)
                                     ) {
                                         allStations.forEach { station ->
                                             DropdownMenuItem(
                                                 text = {
                                                     Text(
                                                         text = "${if (isBengali) station.nameBn else station.nameEn} (${station.code})",
-                                                        fontSize = 13.sp
+                                                        fontSize = 13.sp,
+                                                        color = TextPrimaryLight
                                                     )
                                                 },
                                                 onClick = {
@@ -187,6 +206,7 @@ fun SchedulesScreen(
                                         },
                                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDestMenu) },
                                         shape = RoundedCornerShape(10.dp),
+                                        colors = tfColors,
                                         modifier = Modifier
                                             .menuAnchor()
                                             .fillMaxWidth()
@@ -194,14 +214,16 @@ fun SchedulesScreen(
                                     )
                                     ExposedDropdownMenu(
                                         expanded = showDestMenu,
-                                        onDismissRequest = { showDestMenu = false }
+                                        onDismissRequest = { showDestMenu = false },
+                                        modifier = Modifier.background(Color.White)
                                     ) {
                                         allStations.forEach { station ->
                                             DropdownMenuItem(
                                                 text = {
                                                     Text(
                                                         text = "${if (isBengali) station.nameBn else station.nameEn} (${station.code})",
-                                                        fontSize = 13.sp
+                                                        fontSize = 13.sp,
+                                                        color = TextPrimaryLight
                                                     )
                                                 },
                                                 onClick = {
@@ -275,8 +297,8 @@ fun SchedulesScreen(
                                 quickQuery = it
                                 onGlobalSearch?.invoke(it)
                             },
-                            label = { Text(if (isBengali) "ট্রেনের নাম, নম্বর বা স্টেশন লিখুন" else "Search Train Name, No (701, 813) or Station", fontSize = 11.sp) },
-                            placeholder = { Text("e.g. 701, Suborno, কক্সবাজার, Sylhet", fontSize = 12.sp) },
+                            label = { Text(if (isBengali) "ট্রেনের নাম, নম্বর বা স্টেশন লিখুন" else "Search Train Name, No (701, 805) or Station", fontSize = 11.sp) },
+                            placeholder = { Text("e.g. 805, Chilahati, সুবর্ণ, Cox's Bazar", fontSize = 12.sp) },
                             leadingIcon = {
                                 Icon(Icons.Default.Search, contentDescription = null, tint = BdRailGreenPrimary)
                             },
@@ -291,6 +313,19 @@ fun SchedulesScreen(
                                 }
                             },
                             singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = TextPrimaryLight,
+                                unfocusedTextColor = TextPrimaryLight,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = BdRailGreenDark,
+                                unfocusedBorderColor = Color(0xFFB0BEC5),
+                                focusedLabelColor = BdRailGreenDark,
+                                unfocusedLabelColor = TextSecondaryLight,
+                                focusedPlaceholderColor = Color(0xFF78909C),
+                                unfocusedPlaceholderColor = Color(0xFF90A4AE),
+                                cursorColor = BdRailGreenDark
+                            ),
                             shape = RoundedCornerShape(10.dp),
                             modifier = Modifier.fillMaxWidth().testTag("input_quick_global_search")
                         )

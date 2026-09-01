@@ -38,7 +38,7 @@ fun AppBottomNavBar(
             Triple(AppTab.SCHEDULES, Icons.Default.Schedule, if (isBengali) "সময়সূচী" else "Schedules"),
             Triple(AppTab.TICKETING, Icons.Default.ConfirmationNumber, if (isBengali) "ই-টিকিট" else "E-Tickets"),
             Triple(AppTab.STATION_BOARD, Icons.Default.Dashboard, if (isBengali) "স্টেশন" else "Stations"),
-            Triple(AppTab.SYSTEM_DOCS, Icons.Default.Code, if (isBengali) "রোডম্যাপ" else "System API")
+            Triple(AppTab.FEEDBACK, Icons.Default.HelpOutline, if (isBengali) "মতামত ও হেল্প" else "Help & Feedback")
         )
 
         items.forEach { (tab, icon, label) ->

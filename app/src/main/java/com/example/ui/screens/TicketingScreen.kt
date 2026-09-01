@@ -143,6 +143,18 @@ fun TicketingScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
+                            val ticketingTfColors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = TextPrimaryLight,
+                                unfocusedTextColor = TextPrimaryLight,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                focusedBorderColor = BdRailGreenDark,
+                                unfocusedBorderColor = Color(0xFFB0BEC5),
+                                focusedLabelColor = BdRailGreenDark,
+                                unfocusedLabelColor = TextSecondaryLight,
+                                cursorColor = BdRailGreenDark
+                            )
+
                             // Stations Dropdowns
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -161,15 +173,17 @@ fun TicketingScreen(
                                         label = { Text(if (isBengali) "হতে" else "From", fontSize = 10.sp) },
                                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showOriginMenu) },
                                         shape = RoundedCornerShape(8.dp),
+                                        colors = ticketingTfColors,
                                         modifier = Modifier.menuAnchor().fillMaxWidth()
                                     )
                                     ExposedDropdownMenu(
                                         expanded = showOriginMenu,
-                                        onDismissRequest = { showOriginMenu = false }
+                                        onDismissRequest = { showOriginMenu = false },
+                                        modifier = Modifier.background(Color.White)
                                     ) {
                                         allStations.forEach { st ->
                                             DropdownMenuItem(
-                                                text = { Text(if (isBengali) st.nameBn else st.nameEn, fontSize = 12.sp) },
+                                                text = { Text(if (isBengali) st.nameBn else st.nameEn, fontSize = 12.sp, color = TextPrimaryLight) },
                                                 onClick = {
                                                     onSetOrigin(st)
                                                     showOriginMenu = false
@@ -192,15 +206,17 @@ fun TicketingScreen(
                                         label = { Text(if (isBengali) "গন্তব্য" else "To", fontSize = 10.sp) },
                                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showDestMenu) },
                                         shape = RoundedCornerShape(8.dp),
+                                        colors = ticketingTfColors,
                                         modifier = Modifier.menuAnchor().fillMaxWidth()
                                     )
                                     ExposedDropdownMenu(
                                         expanded = showDestMenu,
-                                        onDismissRequest = { showDestMenu = false }
+                                        onDismissRequest = { showDestMenu = false },
+                                        modifier = Modifier.background(Color.White)
                                     ) {
                                         allStations.forEach { st ->
                                             DropdownMenuItem(
-                                                text = { Text(if (isBengali) st.nameBn else st.nameEn, fontSize = 12.sp) },
+                                                text = { Text(if (isBengali) st.nameBn else st.nameEn, fontSize = 12.sp, color = TextPrimaryLight) },
                                                 onClick = {
                                                     onSetDest(st)
                                                     showDestMenu = false

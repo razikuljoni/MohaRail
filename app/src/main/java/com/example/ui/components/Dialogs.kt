@@ -76,12 +76,27 @@ fun CrowdReportDialog(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
+                val dialogTfColors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = TextPrimaryLight,
+                    unfocusedTextColor = TextPrimaryLight,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = BdRailGreenDark,
+                    unfocusedBorderColor = Color(0xFFB0BEC5),
+                    focusedLabelColor = BdRailGreenDark,
+                    unfocusedLabelColor = TextSecondaryLight,
+                    focusedPlaceholderColor = Color(0xFF78909C),
+                    unfocusedPlaceholderColor = Color(0xFF90A4AE),
+                    cursorColor = BdRailGreenDark
+                )
+
                 OutlinedTextField(
                     value = reporterName,
                     onValueChange = { reporterName = it },
                     label = { Text(if (isBengali) "আপনার নাম" else "Your Name", fontSize = 11.sp) },
                     placeholder = { Text("e.g. Shakil Ahmed", fontSize = 12.sp) },
                     singleLine = true,
+                    colors = dialogTfColors,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth().testTag("input_crowd_name")
                 )
@@ -122,6 +137,7 @@ fun CrowdReportDialog(
                         value = passedStation,
                         onValueChange = { passedStation = it },
                         label = { Text(if (isBengali) "নিকটবর্তী স্টেশন" else "Near Station", fontSize = 11.sp) },
+                        colors = dialogTfColors,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f).testTag("input_crowd_station")
                     )
@@ -129,6 +145,7 @@ fun CrowdReportDialog(
                         value = speedText,
                         onValueChange = { speedText = it.filter { ch -> ch.isDigit() } },
                         label = { Text(if (isBengali) "গতি (km/h)" else "Speed km/h", fontSize = 11.sp) },
+                        colors = dialogTfColors,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.width(100.dp).testTag("input_crowd_speed")
                     )
@@ -140,6 +157,7 @@ fun CrowdReportDialog(
                     value = conditionNote,
                     onValueChange = { conditionNote = it },
                     label = { Text(if (isBengali) "মন্তব্য / ট্রেনের অবস্থা" else "Status Note", fontSize = 11.sp) },
+                    colors = dialogTfColors,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth().testTag("input_crowd_note")
                 )
@@ -249,12 +267,27 @@ fun BookTicketDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
+                val bookTfColors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = TextPrimaryLight,
+                    unfocusedTextColor = TextPrimaryLight,
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White,
+                    focusedBorderColor = BdRailGreenDark,
+                    unfocusedBorderColor = Color(0xFFB0BEC5),
+                    focusedLabelColor = BdRailGreenDark,
+                    unfocusedLabelColor = TextSecondaryLight,
+                    focusedPlaceholderColor = Color(0xFF78909C),
+                    unfocusedPlaceholderColor = Color(0xFF90A4AE),
+                    cursorColor = BdRailGreenDark
+                )
+
                 OutlinedTextField(
                     value = passengerName,
                     onValueChange = { passengerName = it },
                     label = { Text(if (isBengali) "যাত্রীর নাম" else "Passenger Name", fontSize = 11.sp) },
                     placeholder = { Text("As per NID / Passport", fontSize = 12.sp) },
                     singleLine = true,
+                    colors = bookTfColors,
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.fillMaxWidth().testTag("input_ticket_passenger")
                 )
@@ -266,6 +299,7 @@ fun BookTicketDialog(
                         value = selectedCoach,
                         onValueChange = { selectedCoach = it },
                         label = { Text(if (isBengali) "বগি" else "Coach", fontSize = 11.sp) },
+                        colors = bookTfColors,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f).testTag("input_ticket_coach")
                     )
@@ -273,6 +307,7 @@ fun BookTicketDialog(
                         value = seatNumber,
                         onValueChange = { seatNumber = it },
                         label = { Text(if (isBengali) "আসন নং" else "Seat No", fontSize = 11.sp) },
+                        colors = bookTfColors,
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.weight(1f).testTag("input_ticket_seat")
                     )
